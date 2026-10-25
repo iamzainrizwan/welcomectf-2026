@@ -1,0 +1,14 @@
+{$SITE} {
+	# easter egg: robots.txt points at a page we "don't want indexed"
+	handle /robots.txt {
+		respond "User-agent: *
+Disallow: /redacted
+" 200
+	}
+	reverse_proxy ctfd:8000
+}
+
+# the long azure name still works, but sends people to the short one
+{$OLD_SITE} {
+	redir https://{$SITE}{uri} permanent
+}

@@ -1,0 +1,65 @@
+# challenge box: every service challenge, one port each (challenge sources not included, see README)
+x-limits: &limits
+  restart: unless-stopped
+  read_only: true
+  tmpfs: [/tmp]
+  security_opt: [no-new-privileges:true]
+  pids_limit: 128
+
+services:
+  vibe-coded:
+    <<: *limits
+    build: services/vibe-coded
+    ports: ["8001:80"]
+    tmpfs: [/tmp, /var/cache/nginx, /var/run]
+    mem_limit: 128m
+    cpus: 0.25
+
+  bundled:
+    <<: *limits
+    build: services/bundled
+    ports: ["8002:6767"]
+    tmpfs: [/tmp, /var/cache/nginx, /var/run]
+    mem_limit: 128m
+    cpus: 0.25
+
+  injector:
+    <<: *limits
+    build: services/injector
+    ports: ["8003:5000"]
+    mem_limit: 256m
+    cpus: 0.5
+
+  nextimal:
+    <<: *limits
+    build: services/nextimal
+    ports: ["8004:3000"]
+    tmpfs: [/tmp, /app/.next/cache]
+    mem_limit: 512m
+    cpus: 0.5
+
+  # regex timeout challenge: players are meant to pin a CPU, so cap it hard
+  catastrophic:
+    <<: *limits
+    build: services/catastrophic
+    ports: ["8005:3000"]
+    volumes: ["./services/catastrophic/flag.txt:/app/flag.txt:ro"]
+    mem_limit: 256m
+    cpus: 0.5
+
+  jail:
+    <<: *limits
+    build: services/jail
+    ports: ["1337:1337"]
+    mem_limit: 256m
+    cpus: 0.5
+
+  # the jail in a browser, for people without nc
+  jail-web:
+    image: tsl0922/ttyd:1.7.7-alpine
+    restart: unless-stopped
+    command: ["ttyd", "-W", "-t", "titleFixed=jail", "nc", "jail", "1337"]
+    ports: ["7681:7681"]
+    mem_limit: 128m
+    cpus: 0.25
+    depends_on: [jail]

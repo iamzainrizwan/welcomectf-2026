@@ -1,0 +1,40 @@
+# scoreboard box: CTFd + MariaDB + Redis, Caddy in front for HTTPS
+services:
+  ctfd:
+    image: ctfd/ctfd:3.7.7
+    restart: unless-stopped
+    environment:
+      - UPLOAD_FOLDER=/var/uploads
+      - DATABASE_URL=mysql+pymysql://ctfd:${DB_PASSWORD}@db/ctfd
+      - REDIS_URL=redis://cache:6379
+      - WORKERS=4
+      - REVERSE_PROXY=true
+      - SECRET_KEY=${SECRET_KEY}
+    volumes: ["./data/uploads:/var/uploads"]
+    depends_on: [db, cache]
+
+  db:
+    image: mariadb:10.11
+    restart: unless-stopped
+    environment:
+      - MARIADB_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
+      - MARIADB_USER=ctfd
+      - MARIADB_PASSWORD=${DB_PASSWORD}
+      - MARIADB_DATABASE=ctfd
+    volumes: ["./data/mysql:/var/lib/mysql"]
+    command: [mysqld, --character-set-server=utf8mb4, --collation-server=utf8mb4_unicode_ci, --wait_timeout=28800]
+
+  cache:
+    image: redis:7-alpine
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2.8
+    restart: unless-stopped
+    ports: ["80:80", "443:443"]
+    volumes: ["./Caddyfile:/etc/caddy/Caddyfile:ro", "caddy_data:/data"]
+    environment: ["SITE=${SITE}", "OLD_SITE=${OLD_SITE}"]
+    depends_on: [ctfd]
+
+volumes:
+  caddy_data:
